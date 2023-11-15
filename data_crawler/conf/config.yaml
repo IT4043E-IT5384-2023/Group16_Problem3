@@ -1,0 +1,10 @@
+# json_saved_path: "./untitled.json"
+timeout: 20
+credential:
+    # enter your own chain_abuse email and password
+    email: 
+    password: 
+    
+web_browser: "chrome"
+option_str:  # "--headless"
+
