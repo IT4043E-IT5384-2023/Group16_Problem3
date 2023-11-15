@@ -11,7 +11,7 @@ import json, os
 
 
 class ChainAbuseScrapper:
-    base_url = "https://www.chainabuse.com/api/auth/login?returnTo=%2Fchain%2F{}%3Fpage%3D0%26sort%3Doldest%26postAuth%3D1"
+    base_url = "https://www.chainabuse.com/api/auth/login?returnTo=%2Fchain%2F{}%3Fpage%3D56%26sort%3Doldest%26postAuth%3D1"
     chain_type_file_path = "chain_types.json"
 
     def __init__(
@@ -87,12 +87,15 @@ class ChainAbuseScrapper:
 
     def parse_report_card(self):
         content = self.init_content()
-        WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.CLASS_NAME, "create-ScamReportDetails__category"))) 
         # WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.CLASS_NAME, "create-ScamReportDetails__category"))) 
+        WebDriverWait(self.driver, self.timeout).until(EC.presence_of_element_located((By.CLASS_NAME, "create-ScamReportDetails__category"))) 
         ## Wait until completely loading content
 
-        
-        report_id_element = self.driver.find_element(By.XPATH, "/html/head/link[2]")
+        try:
+            report_id_element = self.driver.find_element(By.XPATH, "/html/head/link[2]")
+        except NoSuchElementException as e:
+            self.driver.refresh() # Handling when facing the non-existing page.
+
         href = report_id_element.get_attribute("href")
         content['id'] = href.split("/")[-1]
 
