@@ -1,8 +1,8 @@
 # json_saved_path: "./untitled.json"
 timeout: 20
 credential:
-    email: "superstorm195@gmail.com"
-    password: "Chun9!#!*!"
+    email: 
+    password: 
     
 web_browser: "chrome"
 option_str:  # "--headless"
