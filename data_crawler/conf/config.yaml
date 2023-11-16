@@ -1,10 +1,26 @@
 # json_saved_path: "./untitled.json"
 timeout: 20
 credential:
-    # enter your own chain_abuse email and password
-    email: 
-    password: 
+    email: "superstorm195@gmail.com"
+    password: "Chun9!#!*!"
     
 web_browser: "chrome"
 option_str:  # "--headless"
 
+page_index:
+    chain_id: 1
+    start_num: 0
+    # 0: "BTC",
+    # 1: "ETH",
+    # 2: "BINANCE",
+    # 3: "TRON",
+    # 4: "POLYGON",
+    # 5: "SOL",
+    # 6: "LITECOIN",
+    # 7: "ARBITRUM",
+    # 8: "CARDANO",
+    # 9: "AVALANCHE",
+    # 10: "HBAR",
+    # 11: "MULTIVERSX",
+    # 12: "ALGORAND"
+retry: 2
