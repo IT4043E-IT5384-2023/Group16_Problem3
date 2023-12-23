@@ -40,6 +40,13 @@ def mixing_service(df_raw):
     # msg = alert_msg_mixing(df_detect)
     return df_detect
 
+def write_to_bucket(df):
+    df.to_csv("stream_data.csv")
+def load_data():
+    df = pd.read_csv('stream_data.csv')
+    df['Time'] = pd.to_datetime(df['item_timestamp'])
+    df = df[['name', 'transaction_hash', 'from_address', 'to_address', 'timestamp', 'item_timestamp', 'value', 'price_in_usd', 'Time']]
+    return df
 def get_stream_data(use_kafka=False):
     # use_kafka = False
     if use_kafka:
@@ -52,6 +59,7 @@ def get_stream_data(use_kafka=False):
         df_raw = get_streaming_data(consumer_config, topic)
         if df_raw is not None:
             df_raw['Time'] = pd.to_datetime(df_raw['item_timestamp'])
+            write_to_bucket(df_raw)
         else:
             print('No data received!')
             return
@@ -65,16 +73,17 @@ def get_stream_data(use_kafka=False):
 def process():
     use_kafka = True
     df_raw = get_stream_data(use_kafka)
+    # df_raw.to_csv("stream_data.csv", index=False)
     url = "http://34.143.255.36:9200/"
     user_name = 'elastic'
     pwd = 'elastic2023'
     es = initialize_elasticsearch(url, user_name, pwd)
     df1 = anomaly_token_transaction(df_raw)
-    index_document(es, "g16_token_anomaly", df1)
+    index_document(es, "g16_token_anomaly_", df1)
     df2 = anomaly_wallet_transaction(df_raw)
-    index_document(es, "g16_wallets_anomaly", df2)
+    index_document(es, "g16_wallets_anomaly_", df2)
     df3 = mixing_service(df_raw)
-    index_document(es, "g16_mixing_service", df3)
+    index_document(es, "g16_mixing_service_", df3)
 
 if __name__ == '__main__':
     process()
