@@ -1,8 +1,11 @@
-from kafka_streaming_service import get_streaming_data
-from cluster_based_anomaly import *
-from anomaly_detection import *
-from elasticsearch_processing import *
+from .kafka_streaming_service import get_streaming_data
+from .cluster_based_anomaly import *
+from .anomaly_detection import *
+from .elasticsearch_processing import *
 import warnings
+import os
+
+print(f"{os.path.abspath('./pipeline/final_etherium_token_transfer.csv')=}")
 
 warnings.filterwarnings('ignore')
 
@@ -61,7 +64,9 @@ def get_stream_data(use_kafka=False):
             print('No data received!')
             return
     else: 
-        path = r"D:\Documents\BigData\Group16_Problem5\data\final_etherium_token_transfer.csv"
+        path = "./pipeline/final_etherium_token_transfer.csv"
+        
+        print(os.path.abspath(path))
         df_raw = read_data_csv(path)
         
     return df_raw

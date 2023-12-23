@@ -10,7 +10,7 @@ from kafka import KafkaProducer
 import time
 import socket
 
-from kafka_streaming_service import *
+from .kafka_streaming_service import *
 
 # query token_price info from smart_contract in knowledge graph
 def query_list_token_info(db_kg, token_list_name, token_list_symbol):
@@ -127,7 +127,9 @@ def main():
                             port = 5432)
 
     
+
     df_token_info = query_token_info(db_kg, 'BNB', 'bnb')
+
     print("token_info: ", df_token_info)
     token_list = ['eth', 'usdt', 'bnb', 'usdc', 'steth', 'ton', 'link', 'matic', 'wbtc', 'dai', 'shib', 'uni', 'leo', 'okb', 'tusd', 'cro', 'ldo', 'busd', 'mnt', 'qnt']
     # df_token_info = df_token_info[df_token_info['symbol'].apply(lambda x: any([k == x for k in token_list]))]
