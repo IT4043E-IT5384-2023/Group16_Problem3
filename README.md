@@ -40,7 +40,37 @@ with DAG(dag_id="big_data_dag",
 task1 >> task2 # This means task_2 will run after task_1
 
 ```
-
+The Airflow working directory structure should be like below:
+```
+├── airflow.cfg
+├── airflow.db
+├── airflow-webserver.pid
+├── dags
+│   ├── anomaly_detection_IForest.png
+│   ├── anomaly_detection_user address.png
+│   ├── big_data_dag.py
+│   ├── hello_world_dag.py
+│   ├── kafka_stream_dag.py
+│   ├── proj_repo
+│   ├── _pycache_
+│   └── stream_data.csv
+├── logs
+│   ├── dag_id=big_data_dag
+│   ├── dag_id=hello_world_dag
+│   ├── dag_processor_manager
+│   └── scheduler
+├── venv
+│   ├── bin
+│   ├── generated
+│   ├── include
+│   ├── lib
+│   ├── lib64 -> lib
+│   ├── LICENSE.txt
+│   ├── pyvenv.cfg
+│   └── share
+└── webserver_config.py
+```
+* Note: *proj_repo* is the cloned repository
 
 2. To view the dashboard, please visit: [High Risk Transaction Detection Dashboard](http://34.143.255.36:5601/s/it4043e---group16/app/dashboards#/view/f6f8a710-a13a-11ee-8d94-5d4fdf5aea4c?_g=(filters:!(),refreshInterval:(pause:!t,value:60000),time:(from:now-30d%2Fd,to:now)))
 
