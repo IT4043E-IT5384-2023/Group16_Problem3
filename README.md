@@ -75,4 +75,4 @@ The Airflow working directory structure should be like below:
 2. To view the dashboard, please visit: [High Risk Transaction Detection Dashboard](http://34.143.255.36:5601/s/it4043e---group16/app/dashboards#/view/f6f8a710-a13a-11ee-8d94-5d4fdf5aea4c?_g=(filters:!(),refreshInterval:(pause:!t,value:60000),time:(from:now-30d%2Fd,to:now)))
 
 3. Please find our tele-bot by id *@crypto_centic_bot* to get briefly report.
-4. This is the demonstration of the pipeline process.
+4. This is the demonstration of the pipeline process: [demo](https://drive.google.com/file/d/1vFXfODlzwDov8EAQ6DnY-0oe7_o9-ZaF/view?usp=drive_link)
