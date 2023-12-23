@@ -1,42 +1,39 @@
+from pyspark.sql import Window
+from pyspark.sql import SparkSession, functions as F
+from pyspark.sql.functions import col, sum, count
+from pyod.models.iforest import IForest
+from pyod.models.pca import PCA
+
 import pandas as pd 
 import matplotlib.pyplot as plt  
-import seaborn as sns 
 from collections import Counter
 import numpy as np
 from datetime import datetime, timedelta
-from pyod.models.iforest import IForest
-from pyod.models.pca import PCA
 from sklearn.cluster import KMeans
 import json
+clf_pca = PCA()
+def extract_feature_spark(df, by_wallet= False):
+    days = lambda i: i * 86400
+    # Define the window specification
+    if by_wallet:
+        window_spec = Window().partitionBy('address').orderBy(F.col("Time").cast('long')).rangeBetween(-days(5), 0)
+    else: 
+        window_spec = Window().partitionBy('name').orderBy(F.col("Time").cast('long')).rangeBetween(-days(5), 0)
 
-def read_data_json(path):
-    """Reads a JSON file and returns the data in DataFrame format."""
-    # Read the json file
-    with open(path) as f:
-        data = json.load(f)
-        return pd.DataFrame(data)
+    # Calculate the rolling sum for the previous 5 days
+    df = df.withColumn('sum_5days', sum('price_in_usd').over(window_spec))
+
+    # Calculate the rolling count for the previous 5 days
+    df = df.withColumn('count_5days', count('price_in_usd').over(window_spec))
+
+    # Show the resulting DataFrame
+    # df.show()
     
-def read_data_csv(path):
-    # path = r"D:\Documents\BigData\data\final_etherium_top_token_transfer_1month.csv"
-    df = pd.read_csv(path).drop_duplicates().reset_index().drop(['index'], axis=1)
-    df['Time'] = pd.to_datetime(df['item_timestamp'])
-    df = df[['name', 'transaction_hash', 'from_address', 'to_address', 'timestamp', 'item_timestamp', 'value', 'price_in_usd', 'Time']]
     return df
 
-def wallet_most_transaction(df):
-    
-    accounts = df['from_address'].to_list() + df['to_address'].to_list()
-    most_common = Counter(accounts).most_common()
-    
-    return most_common
-
-def wash_check(df, addr):
-    # wash_check = df[['from_address', 'to_address']]
-    # dupes = wash_check[wash_check.duplicated(['from_address'])]
-    wash_check = df[(df['from_address'] == addr) | (df['to_address'] == addr)]
-    return wash_check
 def extract_feature(df, by_wallet= False):
     df = df.set_index('Time').sort_index()
+    print(df)
 
     if not by_wallet:
         df['sum_5days'] = df.groupby('name')['price_in_usd'].transform(lambda s: s.rolling(timedelta(days=5)).sum())
@@ -47,8 +44,14 @@ def extract_feature(df, by_wallet= False):
     
     return df
 
-def detect(df, model_name, anomaly_proportion=0.1, by_wallet=False):
-    df = extract_feature(df, by_wallet)
+def detect(df, model_name, spark, anomaly_proportion=0.1, by_wallet=False):
+    if spark:
+        df = extract_feature_spark(df, by_wallet)
+        # Convert PySpark DataFrame to pandas DataFrame
+        pandas_df = df.toPandas()
+    else:
+        pandas_df = extract_feature(df, by_wallet)
+    
     # train IForest detector
     if model_name == 'IForest':
         clf = IForest(contamination=anomaly_proportion)
@@ -58,16 +61,19 @@ def detect(df, model_name, anomaly_proportion=0.1, by_wallet=False):
         print('Model was not supported')
         return
 
-    X = df[['count_5days', 'sum_5days']]
+    X = pandas_df[['count_5days', 'sum_5days']]
     clf.fit(X)
 
     # get the prediction labels and outlier scores of the training data
-    df['y_pred'] = clf.labels_ # binary labels (0: inliers, 1: outliers)
-    df['y_scores'] = clf.decision_scores_ # raw outlier scores. The bigger the number the greater the anomaly
+    pandas_df['y_pred'] = clf.labels_ # binary labels (0: inliers, 1: outliers)
+    pandas_df['y_scores'] = clf.decision_scores_ # raw outlier scores. The bigger the number the greater the anomaly
     # print(pandas_df.sort_values(by=['y_pred'], ascending=False).head(15))
     
-    return df
+    return pandas_df
 
+def alert_msg(df_detect):
+    anomaly = df_detect[df_detect['y_pred'] == 1]
+    return len(anomaly)
 # def ensemble_detection(df):
 def evaluate_scam(df, scam_groundtruth):
     inference1 = df[df['to_address'].apply(lambda x: any([k == x for k in scam_groundtruth]))]
@@ -78,13 +84,7 @@ def evaluate_scam(df, scam_groundtruth):
     # no_detected = len(set_detected)
     
     return set_detected
-def alert_msg(df_detect):
-    anomaly = df_detect[df_detect['y_pred'] == 1]
-    # print(anomaly)
-    # addr_anomaly = list(anomaly['transaction_hash'])
-    # msg = f"Found {len(addr_anomaly)} anomaly transactions"
-    return len(anomaly)
-    
+
 def visualize(df, name):
     colors = np.array(['#ff7f00', '#377eb8'])
     plt.scatter(df['count_5days'], df['sum_5days'], s=10, color=colors[(df['y_pred'] - 1) // 2])
@@ -94,7 +94,7 @@ def visualize(df, name):
     plt.title(f"Anomaly Detection - {name}")
     plt.savefig(f"anomaly_detection_{name}.png")
     # plt.show()
-
+    
 def label(row):
     if row['cluster'] > 0:
         return 'high_risk'
@@ -125,3 +125,5 @@ def handle_detection(df_detect, wallets=False):
         df_detect.loc[index, 'label'] = row['label']
 
     return df_detect
+# def ensemble_detection(df):
+    

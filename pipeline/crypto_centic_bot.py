@@ -2,7 +2,7 @@ import io
 from PIL import Image
 from dotenv import load_dotenv
 import os
-from processing import *
+from stream import *
 from anomaly_detection import *
 from check_scam import check_scam
 from cluster_based_anomaly import *
@@ -15,7 +15,8 @@ from telegram.ext.messagehandler import MessageHandler
 from telegram.ext.filters import Filters
 
 load_dotenv()
-TOKEN = os.getenv('TOKEN')
+# TOKEN = os.getenv('TOKEN')
+TOKEN = '6360600074:AAH0dhyihW89gIsF2kYDut2-Dy2RAjsp5n0'
 
 def start(update, context):
     update.message.reply_text("Welcome to Centic Crypto BOT!")
@@ -30,10 +31,11 @@ def check(update, context):
 def alert(update, context):
     chat_id = update.message.chat_id
     # path = r"D:\Documents\BigData\Group16_Problem5\data\final_etherium_token_transfer.csv"
-    df_raw = get_stream_data()
-    df1 = anomaly_token_transaction(df_raw)
-    df2 = anomaly_wallet_transaction(df_raw)
-    df3 = mixing_service(df_raw)
+    spark = False
+    df_raw = get_dataset(bucket=False)
+    df1 = anomaly_token_transaction(df_raw, spark)
+    df2 = anomaly_wallet_transaction(df_raw, spark)
+    df3 = mixing_service(df_raw, spark)
 
     msg1 = f"Found {alert_msg(df1)} high-risk token transactions."
     update.message.reply_text(msg1)

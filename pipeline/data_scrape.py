@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 import json
 import pickle
-from kafka import KafkaProducer
+# from kafka import KafkaProducer
 import time
 import socket
 
@@ -126,11 +126,11 @@ def main():
                             password = "svbk_2023",
                             port = 5432)
     
-    df_addr = pd.read_csv(r'D:\Documents\BigData\token\top_token.csv')
-    token_list_name = list(df_addr['name'])
-    token_list_symbol = list(df_addr['symbol'])
+    # df_addr = pd.read_csv(r'D:\Documents\BigData\token\top_token.csv')
+    # token_list_name = list(df_addr['name'])
+    # token_list_symbol = list(df_addr['symbol'])
     
-    df_token_info = query_token_info(db_kg, token_list_name[2], token_list_symbol[2])
+    df_token_info = query_token_info(db_kg, 'BNB', 'bnb')
     print("token_info: ", df_token_info)
     token_list = ['eth', 'usdt', 'bnb', 'usdc', 'steth', 'ton', 'link', 'matic', 'wbtc', 'dai', 'shib', 'uni', 'leo', 'okb', 'tusd', 'cro', 'ldo', 'busd', 'mnt', 'qnt']
     # df_token_info = df_token_info[df_token_info['symbol'].apply(lambda x: any([k == x for k in token_list]))]

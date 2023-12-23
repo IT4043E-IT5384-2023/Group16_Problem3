@@ -5,6 +5,9 @@ import numpy as np
 from sklearn.preprocessing import RobustScaler
 from sklearn.cluster import DBSCAN
 from PyNomaly import loop
+# from pyspark.sql.functions import count, mean, max, min, datediff, countDistinct
+import pyspark.sql.functions as F
+
 
 
 def read_data_csv(path):
@@ -12,7 +15,6 @@ def read_data_csv(path):
     # new_df = df_1month.copy()
     df['item_timestamp'] = pd.to_datetime(df['item_timestamp'])
     return df
-
 def extract_node_feature(df):
     graph1 = pd.DataFrame(df.groupby(by=['to_address'])['from_address'].count())
     graph1['value'] = df.groupby(by=['to_address'])['value'].mean()
@@ -28,6 +30,55 @@ def extract_node_feature(df):
 
     df_nodes = pd.merge(graph1, graph2, how = 'left', on=['address'], validate="many_to_many").fillna(0)
 
+    return df_nodes
+def extract_node_feature_spark(df_spark):
+    # Count incoming edges per address
+    graph1_df = df_spark.groupBy('to_address').agg(
+        F.count('from_address').alias('in_degree')
+    )
+    # Calculate average outgoing value per address
+    graph1_df = graph1_df.join(
+        df_spark.groupBy('to_address').agg(F.mean('price_in_usd').alias('mean_value_ingoing')),
+        on='to_address'
+    )
+    # Count unique outgoing addresses per address
+    graph1_df = graph1_df.join(
+        df_spark.groupBy('to_address').agg(F.countDistinct('from_address').alias('unique_in_degree')),
+        on='to_address'
+    )
+    graph1_df = graph1_df.join(
+        df_spark.groupBy('to_address').agg((F.max('timestamp') - F.min('timestamp')).alias('interval_ingoing')),
+        on='to_address'
+    )
+    graph1_df = graph1_df.withColumnRenamed('to_address', 'address')
+    
+    # Count incoming edges per address
+    graph2_df = df_spark.groupBy('from_address').agg(
+        F.count('to_address').alias('out_degree')
+    )
+    # Calculate average outgoing value per address
+    graph2_df = graph2_df.join(
+        df_spark.groupBy('from_address').agg(F.mean('price_in_usd').alias('mean_value_outgoing')),
+        on='from_address'
+    )
+    # Count unique outgoing addresses per address
+    graph2_df = graph2_df.join(
+        df_spark.groupBy('from_address').agg(F.countDistinct('from_address').alias('unique_out_degree')),
+        on='from_address'
+    )
+    graph2_df = graph2_df.join(
+        df_spark.groupBy('from_address').agg((F.max('timestamp') - F.min('timestamp')).alias('interval_outgoing')),
+        on='from_address'
+    )
+    graph2_df = graph2_df.withColumnRenamed('from_address', 'address')
+    
+    df_nodes_spark = (
+        graph1_df
+        .join(graph2_df, on='address', how='left_outer')
+        .fillna(0)  # Replace null values with 0
+    )
+
+    df_nodes = df_nodes_spark.toPandas()
     return df_nodes
 def transform_feature(df):
     scaled_df = df.copy()
@@ -68,7 +119,7 @@ def detect_mixing(df):
        'unique_in_degree', 'interval_ingoing']], extent=3, n_neighbors=min_neighbor-1, cluster_labels=list(db.labels_)).fit()
     scores = m.local_outlier_probabilities
     scaled_df['LoOP_scores'] = scores
-    print(scaled_df.sort_values(by=['LoOP_scores'], ascending=False).head(10))
+    # print(scaled_df.sort_values(by=['LoOP_scores'], ascending=False).head(10))
     
     return scaled_df
 

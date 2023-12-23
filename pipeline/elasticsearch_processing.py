@@ -15,7 +15,7 @@ def index_document(es, index_name, df):
         # print(data)
         # json_data = json.dumps(data)
         # document['Time'] = df_test.index[i]
-        resp = es.index(index=index_name, id=index, document=data)
+        resp = es.index(index=index_name, id = index, document=data)
 
     print(resp['result'])
     
