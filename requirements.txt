@@ -9,3 +9,5 @@ PyNomaly
 seaborn
 pyod
 elasticsearch
+torch
+tqdm

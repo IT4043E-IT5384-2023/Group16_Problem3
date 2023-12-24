@@ -4,6 +4,8 @@ from .anomaly_detection import *
 from .elasticsearch_processing import *
 import warnings
 import os
+from SDNE.extract_feat import graph_extract_node_features
+
 
 print(f"{os.path.abspath('./pipeline/final_etherium_token_transfer.csv')=}")
 
@@ -31,8 +33,11 @@ def anomaly_wallet_transaction(df_raw):
     print('anomaly wallet transaction:', df_rules.columns)
     return df_rules
     
-def mixing_service(df_raw):
-    df_nodes = extract_node_feature(df_raw)
+def mixing_service(df_raw, use_gnn_embed = True):
+    if use_gnn_embed:
+        df_nodes = graph_extract_node_features(df_raw)
+    else:
+        df_nodes = extract_node_feature(df_raw)
     # scaled_df = transform_feature(df_nodes)
     df_detect = detect_mixing(df_nodes)
     df_detect = handle_detection_mixing(df_detect)

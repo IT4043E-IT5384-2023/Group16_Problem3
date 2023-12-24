@@ -3,8 +3,9 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import RobustScaler
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, KMeans
 from PyNomaly import loop
+from SDNE.extract_feat import graph_extract_node_features
 
 
 def read_data_csv(path):
@@ -26,7 +27,7 @@ def extract_node_feature(df):
     graph2['interval_ingoing'] = df.groupby(by=['from_address'])['timestamp'].agg(lambda x: x.max() - x.min())
     graph2 = graph2.reset_index().rename(columns={'from_address': 'address', 'to_address': 'in_degree', 'value': 'mean_value_ingoing'})
 
-    df_nodes = pd.merge(graph1, graph2, how = 'left', on=['address'], validate="many_to_many").fillna(0)
+    df_nodes = pd.merge(graph1, graph2, how = 'outer', on=['address'], validate="many_to_many").fillna(0)
 
     return df_nodes
 def transform_feature(df):
@@ -54,25 +55,33 @@ def transform_feature(df):
     
     return scaled_df
 
-def detect_mixing(df):
-    scaled_df = transform_feature(df)
-    db = DBSCAN(eps=0.9, min_samples=10).fit(scaled_df[['out_degree', 'mean_value_outgoing', 'unique_out_degree',
-       'interval_outgoing', 'in_degree', 'mean_value_ingoing',
-       'unique_in_degree', 'interval_ingoing']])
-    scaled_df['cluster'] = db.labels_
-    
-    min_neighbor = min(scaled_df['cluster'].value_counts())
-    
-    m = loop.LocalOutlierProbability(scaled_df[['out_degree', 'mean_value_outgoing', 'unique_out_degree',
-       'interval_outgoing', 'in_degree', 'mean_value_ingoing',
-       'unique_in_degree', 'interval_ingoing']], extent=3, n_neighbors=min_neighbor-1, cluster_labels=list(db.labels_)).fit()
+def detect_mixing(df, use_gnn_embed = True):
+    if use_gnn_embed:
+        scaled_df = df
+        features = df.copy().iloc[:, 1:]
+    else:
+        scaled_df = transform_feature(df)
+        features = scaled_df[[
+            'out_degree', 'mean_value_outgoing', 'unique_out_degree',
+            'interval_outgoing', 'in_degree', 'mean_value_ingoing',
+            'unique_in_degree', 'interval_ingoing']
+        ]
+
+    # db = DBSCAN(eps=0.9, min_samples=10).fit(features)
+    kmean = KMeans(n_clusters=3).fit(features)
+    scaled_df['cluster'] = kmean.labels
+    _, counts = np.unique(kmean.labels_, return_counts=True) # values = [0, 1, 2], counts = [4, 3, 3]
+    min_neighbor = np.min(counts) # min_neighbor = 3
+
+
+    m = loop.LocalOutlierProbability(features, extent=3, n_neighbors=min_neighbor-1, cluster_labels=list(kmean.labels_)).fit()
     scores = m.local_outlier_probabilities
     scaled_df['LoOP_scores'] = scores
     print(scaled_df.sort_values(by=['LoOP_scores'], ascending=False).head(10))
     
     return scaled_df
 
-def handle_detection_mixing(df_detect, threshold = 0.9):
+def handle_detection_mixing(df_detect, threshold = 0.75):
     df_detect['pred'] = df_detect['LoOP_scores'].apply(lambda x: 1 if x > threshold else 0)
     df_detect['label'] = df_detect['LoOP_scores'].apply(lambda x: 'mixing_risk' if x > threshold else 'normal')
     return df_detect[df_detect['label'] == 'mixing_risk']
@@ -121,14 +130,14 @@ def main():
     start_time = time.time()
     print("Cluster-based anomaly detection!")
 
-    path = r"D:\Documents\BigData\Group16_Problem5\data\final_etherium_token_transfer.csv"
+    path = "./final_etherium_token_transfer.csv"
     df = read_data_csv(path)
     
-    df_nodes = extract_node_feature(df)
+    df_nodes = graph_extract_node_features(df)
     # scaled_df = transform_feature(df_nodes)
     df_detect = detect_mixing(df_nodes)
     df_detect = handle_detection_mixing(df_detect)
-    visualize_anomaly(df_detect, "user address")
+    # visualize_anomaly(df_detect, "user address")
     print(alert_msg_mixing(df_detect))
     # print(df_detect)
     elapsed_time_seconds = time.time() - start_time
@@ -143,5 +152,6 @@ def main():
     
 if __name__ == '__main__':
     main()
+    
     
     
