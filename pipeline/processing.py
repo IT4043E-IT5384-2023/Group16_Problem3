@@ -1,8 +1,13 @@
-from kafka_streaming_service import get_streaming_data
-from cluster_based_anomaly import *
-from anomaly_detection import *
-from elasticsearch_processing import *
+from .kafka_streaming_service import get_streaming_data
+from .cluster_based_anomaly import *
+from .anomaly_detection import *
+from .elasticsearch_processing import *
 import warnings
+import os
+from SDNE.extract_feat import graph_extract_node_features
+
+
+print(f"{os.path.abspath('./pipeline/final_etherium_token_transfer.csv')=}")
 
 warnings.filterwarnings('ignore')
 
@@ -28,8 +33,11 @@ def anomaly_wallet_transaction(df_raw):
     print('anomaly wallet transaction:', df_rules.columns)
     return df_rules
     
-def mixing_service(df_raw):
-    df_nodes = extract_node_feature(df_raw)
+def mixing_service(df_raw, use_gnn_embed = True):
+    if use_gnn_embed:
+        df_nodes = graph_extract_node_features(df_raw)
+    else:
+        df_nodes = extract_node_feature(df_raw)
     # scaled_df = transform_feature(df_nodes)
     df_detect = detect_mixing(df_nodes)
     df_detect = handle_detection_mixing(df_detect)
@@ -37,6 +45,13 @@ def mixing_service(df_raw):
     # msg = alert_msg_mixing(df_detect)
     return df_detect
 
+def write_to_bucket(df):
+    df.to_csv("stream_data.csv")
+def load_data():
+    df = pd.read_csv('stream_data.csv')
+    df['Time'] = pd.to_datetime(df['item_timestamp'])
+    df = df[['name', 'transaction_hash', 'from_address', 'to_address', 'timestamp', 'item_timestamp', 'value', 'price_in_usd', 'Time']]
+    return df
 def get_stream_data(use_kafka=False):
     # use_kafka = False
     if use_kafka:
@@ -49,27 +64,31 @@ def get_stream_data(use_kafka=False):
         df_raw = get_streaming_data(consumer_config, topic)
         if df_raw is not None:
             df_raw['Time'] = pd.to_datetime(df_raw['item_timestamp'])
+            write_to_bucket(df_raw)
         else:
             print('No data received!')
             return
     else: 
-        path = r"D:\Documents\BigData\Group16_Problem5\data\final_etherium_token_transfer.csv"
+        path = "./pipeline/final_etherium_token_transfer.csv"
+        
+        print(os.path.abspath(path))
         df_raw = read_data_csv(path)
         
     return df_raw
 def process():
     use_kafka = True
     df_raw = get_stream_data(use_kafka)
+    # df_raw.to_csv("stream_data.csv", index=False)
     url = "http://34.143.255.36:9200/"
     user_name = 'elastic'
     pwd = 'elastic2023'
     es = initialize_elasticsearch(url, user_name, pwd)
     df1 = anomaly_token_transaction(df_raw)
-    index_document(es, "g16_token_anomaly", df1)
+    index_document(es, "g16_token_anomaly_", df1)
     df2 = anomaly_wallet_transaction(df_raw)
-    index_document(es, "g16_wallets_anomaly", df2)
+    index_document(es, "g16_wallets_anomaly_", df2)
     df3 = mixing_service(df_raw)
-    index_document(es, "g16_mixing_service", df3)
+    index_document(es, "g16_mixing_service_", df3)
 
 if __name__ == '__main__':
     process()

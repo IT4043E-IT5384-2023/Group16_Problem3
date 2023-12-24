@@ -30,7 +30,7 @@ def check(update, context):
 def alert(update, context):
     chat_id = update.message.chat_id
     # path = r"D:\Documents\BigData\Group16_Problem5\data\final_etherium_token_transfer.csv"
-    df_raw = get_stream_data()
+    df_raw = load_data()
     df1 = anomaly_token_transaction(df_raw)
     df2 = anomaly_wallet_transaction(df_raw)
     df3 = mixing_service(df_raw)

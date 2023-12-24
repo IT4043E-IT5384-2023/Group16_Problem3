@@ -1,0 +1,13 @@
+pymongo
+psycopg2
+pandas
+kafka-python
+confluent-kafka
+matplotlib
+scikit-learn
+PyNomaly
+seaborn
+pyod
+elasticsearch
+torch
+tqdm

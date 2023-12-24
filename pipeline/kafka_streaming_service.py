@@ -72,7 +72,8 @@ def get_streaming_data(consumer_config, topic):
             # Deserialize JSON message and append to DataFrame
             json_data = json.loads(msg.value())
             # print(json_data)
-            df_received = df_received.append(pd.DataFrame.from_dict([json_data], orient='columns'))
+            df_received = pd.concat([df_received, pd.DataFrame.from_dict([json_data], orient='columns')])
+            
             x += 1
             y = 0
             print(x, 'messages with values consumed.')
